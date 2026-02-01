@@ -5,8 +5,6 @@
     <meta charset="UTF-8" />
     <title>Antigone – Génération de facture</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- POLICE -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -35,7 +33,7 @@
         .container {
             background: #fff;
             width: 100%;
-            max-width: 520px;
+            max-width: 600px;
             border-radius: 18px;
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
             padding: 35px;
@@ -101,7 +99,66 @@
             min-height: 90px;
         }
 
-        button {
+        /* SERVICES SECTION */
+        .services-container {
+            margin-bottom: 20px;
+        }
+
+        .service-item {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 3px solid var(--primary);
+            position: relative;
+        }
+
+        .service-item h3 {
+            font-size: 14px;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .remove-service {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remove-service:hover {
+            background: #dc2626;
+        }
+
+        .add-service-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 2px dashed var(--primary);
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+
+        .add-service-btn:hover {
+            background: rgba(107, 63, 140, 0.05);
+        }
+
+        button[type="submit"] {
             width: 100%;
             padding: 14px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
@@ -114,9 +171,27 @@
             transition: transform 0.15s, box-shadow 0.15s;
         }
 
-        button:hover {
+        button[type="submit"]:hover {
             transform: translateY(-1px);
             box-shadow: 0 12px 25px rgba(107, 63, 140, 0.35);
+        }
+
+        .total-preview {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .total-preview h3 {
+            font-size: 14px;
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+
+        .total-preview p {
+            margin: 5px 0;
+            font-size: 13px;
         }
 
         .status {
@@ -150,27 +225,38 @@
             <img src="https://antigoneagency.com/Antigone%20horiiiz-132.svg" alt="Antigone Agency">
         </div>
 
-        <h2>Génération de facture (TEST)</h2>
+        <h2>Génération de facture</h2>
         <link rel="icon" type="image/png" href="https://antigoneagency.com/favicon.png">
 
         <form id="invoiceForm">
-            <label>Nom du client </label>
+            <label>Nom du client</label>
             <input type="text" name="client" required>
 
             <label>Email</label>
             <input type="email" name="Email" required>
 
-            <label>Service fourni</label>
-            <textarea name="service" required></textarea>
+            <label>Date de la facture</label>
+            <input type="date" name="Date" required>
 
-            <label>Montant HTVA (TND)</label>
-            <input type="number" step="0.001" name="Montant (HTVA)" required>
+            <h3 style="margin-top: 25px; margin-bottom: 15px;">Services fournis</h3>
 
-            <!-- champs cachés -->
-            <input type="hidden" name="timbre" value="1">
-            <input type="hidden" name="source" value="test_webhook">
+            <div id="servicesContainer" class="services-container">
+                <!-- Les services seront ajoutés ici dynamiquement -->
+            </div>
 
-            <button type="submit">Tester le webhook</button>
+            <button type="button" class="add-service-btn" onclick="addService()">
+                + Ajouter un service
+            </button>
+
+            <div class="total-preview">
+                <h3>Aperçu des totaux</h3>
+                <p>Sous-total HT: <strong id="previewHT">0.000 TND</strong></p>
+                <p>TVA (19%): <strong id="previewTVA">0.000 TND</strong></p>
+                <p>Timbre fiscal: <strong>1.000 TND</strong></p>
+                <p style="font-size: 16px; margin-top: 10px;">Total TTC: <strong id="previewTTC">1.000 TND</strong></p>
+            </div>
+
+            <button type="submit">Générer la facture</button>
         </form>
 
         <div id="status" class="status"></div>
@@ -181,6 +267,58 @@
     </div>
 
     <script>
+        let serviceCount = 0;
+
+        // Ajouter un service automatiquement au chargement
+        window.onload = () => {
+            addService();
+        };
+
+        function addService() {
+            serviceCount++;
+            const container = document.getElementById('servicesContainer');
+
+            const serviceDiv = document.createElement('div');
+            serviceDiv.className = 'service-item';
+            serviceDiv.id = `service-${serviceCount}`;
+
+            serviceDiv.innerHTML = `
+                <h3>Service ${serviceCount}</h3>
+                ${serviceCount > 1 ? `<button type="button" class="remove-service" onclick="removeService(${serviceCount})">×</button>` : ''}
+                
+                <label>Description du service</label>
+                <textarea name="services[${serviceCount}][description]" required></textarea>
+                
+                <label>Montant HTVA (TND)</label>
+                <input type="number" step="0.001" name="services[${serviceCount}][montant]" required onchange="calculateTotal()">
+            `;
+
+            container.appendChild(serviceDiv);
+            calculateTotal();
+        }
+
+        function removeService(id) {
+            const serviceDiv = document.getElementById(`service-${id}`);
+            serviceDiv.remove();
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            const inputs = document.querySelectorAll('input[name*="[montant]"]');
+            let totalHT = 0;
+
+            inputs.forEach(input => {
+                totalHT += parseFloat(input.value) || 0;
+            });
+
+            const tva = totalHT * 0.19;
+            const totalTTC = totalHT + tva + 1; // +1 pour le timbre fiscal
+
+            document.getElementById('previewHT').textContent = totalHT.toFixed(3) + ' TND';
+            document.getElementById('previewTVA').textContent = tva.toFixed(3) + ' TND';
+            document.getElementById('previewTTC').textContent = totalTTC.toFixed(3) + ' TND';
+        }
+
         const form = document.getElementById('invoiceForm');
         const statusDiv = document.getElementById('status');
 
@@ -189,7 +327,30 @@
             statusDiv.style.display = 'none';
 
             const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
+            const data = {};
+
+            // Convertir les données du formulaire
+            for (let [key, value] of formData.entries()) {
+                if (key.includes('services[')) {
+                    // Extraire l'index et le champ
+                    const match = key.match(/services\[(\d+)\]\[(\w+)\]/);
+                    if (match) {
+                        const index = match[1];
+                        const field = match[2];
+
+                        if (!data.services) data.services = [];
+                        if (!data.services[index]) data.services[index] = {};
+                        data.services[index][field] = value;
+                    }
+                } else {
+                    data[key] = value;
+                }
+            }
+
+            // Nettoyer le tableau services (enlever les indices vides)
+            if (data.services) {
+                data.services = data.services.filter(s => s);
+            }
 
             try {
                 const res = await fetch(
@@ -203,13 +364,19 @@
 
                 if (!res.ok) throw new Error();
 
-                statusDiv.textContent = "✅ TEST OK – Données reçues par n8n.";
+                statusDiv.textContent = "✅ Facture générée avec succès !";
                 statusDiv.className = "status success";
                 statusDiv.style.display = "block";
+
+                // Réinitialiser le formulaire
                 form.reset();
+                document.getElementById('servicesContainer').innerHTML = '';
+                serviceCount = 0;
+                addService();
+                calculateTotal();
 
             } catch (err) {
-                statusDiv.textContent = "❌ ERREUR – Webhook ne répond pas.";
+                statusDiv.textContent = "❌ ERREUR – Impossible de générer la facture.";
                 statusDiv.className = "status error";
                 statusDiv.style.display = "block";
             }
